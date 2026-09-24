@@ -1,0 +1,152 @@
+---
+name: handoff
+description: Mandatory at END of every active handoff stage, immediately before writing the next /handoff — not at stage start. Skeleton, field semantics, CONSULT / CONSULT HISTORY.
+---
+
+# /handoff
+
+Write now — end of this stage, not task start. Keep routing recommendations and their brief reason only in the short unfenced header above `PROMPT:`. Write each field as its own paragraph with exactly one blank line between fields. Keep labels plain; bold the next stage and each model and effort value. The fenced prompt contains only what the receiving model needs to continue: task state, constraints, exposure/shape, checks, advisor accounting, and relevant delegation state. Do not duplicate header-only fields inside it.
+
+## Active workflow contract
+
+A user `/handoff` request or a received handoff activates the workflow through the stage chain. Skill loads do not carry between stages. Every receiving stage must freshly load `routing` before any action, must load `consult` before any advisor call, and must load this `handoff` skill only at END before writing the next handoff. Every handoff must carry the mandatory loads in its `PROMPT:` exactly as the skeleton shows.
+
+For a legacy handoff containing only `RISK:`, classify the next concrete action into `EXPOSURE:` and `SHAPE:` at stage start. Do not inherit or translate the old workflow-wide maximum mechanically.
+
+## Infer STAGE
+
+| State | STAGE |
+|---|---|
+| no plan | Plan |
+| unverified plan | Verify Plan |
+| ready plan | Implement |
+| implemented | Verify Implementation |
+
+Without `/handoff`, work directly. Micro normally skips Plan and Verify Plan; Bounded may use an inline plan and skips separate verification unless a material decision remains. Skip a stage: same skeleton, add `SKIP TO: <stage>`, justify the skip.
+
+## Skeleton
+
+The header before `PROMPT:` is unfenced. Write each field as its own paragraph with exactly one blank line between fields—never combine fields on one line or in one paragraph. Keep field labels plain (e.g. write `NEXT:`, not `**NEXT:**`). Bold only the `NEXT` value and each model and effort value exactly as shown below (`**<model>**, **<effort>**`; keep `none` plain). Enclose only the content under `PROMPT:` in a ```md code fence.
+
+REPO: <short label>
+
+NEXT: **<next stage>**
+
+PREFERRED: **<model>**, **<effort>**
+
+SECONDARY: **<{{if .Both}}other-provider {{end}}model>**, **<effort>**
+
+TERTIARY: **<model>**, **<effort>**
+
+WHY: <brief routing reason>
+
+ADVISORS: <none | N call(s), complete | N call(s): <nonzero buckets only, e.g. 1 complete, 1 failed (usage limit)> | unverified (<reason>); see CONSULT HISTORY>
+
+STATE: <changed/committed/applied or blocked; one short line>
+
+PROMPT:
+```md
+HANDOFF WORKFLOW: active
+MANDATORY SKILLS:
+- Load `routing` before any stage action; do not rely on a prior stage's load or summary.
+- Load `consult` before any advisor call; loading it never requires a call.
+- Load `handoff` only at END, immediately before writing the required next handoff.
+REPO: <short label>
+CURRENT STAGE: <stage>
+EXPOSURE: <Local|Shared|Consequential; concrete next action and boundary>
+SHAPE: <Micro|Bounded|Standard|Deep; basis>
+TASK GOAL: <one sentence>
+PLAN FILE: <repo-relative path or "not needed">
+SPEC FILES: <repo-relative paths or "none known">
+CONSULT BUDGET ID: <stable user-approved scope-envelope identifier>
+CONSULT LIMIT: <completed batches cap>; <attempts cap>
+CONSULT GRANTS: <each exact additional batch/attempt pair, user authorization and route/fallback restrictions, or none>
+CONSULT LEDGER: <durable owner ledger path>
+CONSULT STATE: <consistent|conflicted; evidence and frozen allowance if conflicted>
+CONSULT USED: <completed_batches>/<cap> batches; <attempts_started>/<cap> attempts; preserve unknown/conflicting values explicitly>
+CONSULT TRIGGER: <exact eligible trigger, or none>
+CONSULT BATCH ID: <stable batch ID, or none>
+CONSULT SCOPE: <checkpoint and all bundled questions>
+CONSULT STATUS: <not triggered|required|partial|covered|exhausted>
+ADVISOR ALLOWANCE HISTORY: <complete historical selection evidence, or none>
+CONSULT COVERAGE: <actual decisions/boundaries covered -> batch ID; uncovered questions explicit>
+CONSULT HISTORY: <every attempt: batch/attempt/trigger/owner provider/advisor provider/model/effort/transport/diversity/launch specification/child ID/exit or harness state/failure reason/report status/coverage/counter changes, or none>
+DELEGATION STATE: <worker worktrees/branches, stopped or active, integration and cleanup status; or none>
+REPO CONSTRAINTS:
+- <hard rules only>
+CONTEXT:
+- <facts needed by the next model>
+WHAT TO CHECK/DO:
+1. <actionable item>
+PREFERRED BEHAVIOR:
+- <when to edit/fix/approve/reject>
+CHECKS TO RUN:
+- <commands or "none">
+EXACT SUCCESS CRITERIA:
+- <observable outcome>
+NEXT HANDOFF TO WRITE:
+- <exact next /handoff, or for Verify Implementation the Plan Next Version offer>
+
+EXPECTED OUTPUT:
+<what this model should produce, including the exact next /handoff it must write, or for Verify Implementation the exact Plan Next Version offer it must state>
+```
+
+## Field semantics
+
+| Field | Fill |
+|---|---|
+| REPO | label, not a path; or `none`. Repo-relative paths go inside the prompt |
+| NEXT / CURRENT STAGE | receiving stage from Infer STAGE; NEXT is the short summary (bolded in header: `NEXT: **<stage>**`) |
+| ADVISORS | human quick status; full accounting lives in CONSULT USED / CONSULT HISTORY. Calls = `attempts_started`. Write exactly one form: `none` (0 calls); `N call(s), complete` (all complete); `N call(s): ` + only non-zero buckets in order complete, partial, failed, each partial/failed with a short parenthesized reason; `unverified (<reason>); see CONSULT HISTORY` when history is missing or conflicting. Never write zero buckets or a trailing `none` (not `0 calls: 0 complete, 0 partial, 0 failed; none`) |
+| STATE | one-line working/commit/deployment/blocker summary |
+| EXPOSURE | exposure of the next concrete action: Local, Shared or Consequential; name the actual boundary, not a sensitive topic |
+| SHAPE | task shape: Micro, Bounded, Standard or Deep; state the evidence that makes the low route checkable or requires more capability |
+| PLAN FILE | repo-relative, or `not needed: simple task` |
+| SPEC FILES | spec/design/requirements in-repo or from the user prompt; `none known` if absent — never omit the field |
+| PREFERRED | one model + effort. Header format: `PREFERRED: **<model>**, **<effort>**`. One route, no competing plans. No clear best → stop and ask |
+{{if .Both}}| SECONDARY | matched-capability other-provider model + effort. Match task capability, not effort names: Sol medium pairs with Opus low, Sol xhigh with Opus medium. Header format: `SECONDARY: **<{{if .Both}}other-provider {{end}}model>**, **<effort>**`. Impossible → say why in WHY |{{else}}| SECONDARY | a second suitable {{.OnlyProvider}} model or effort that matches the task's capability, or `none`. Header format: `SECONDARY: **<model>**, **<effort>**`. Only one provider is selected, so no other-provider route exists |{{end}}
+| TERTIARY | third distinct suitable model, or `none`. Header format: `TERTIARY: **<model>**, **<effort>**` or `none`. {{if .Both}}The three together span at least two providers and never repeat a model.{{else}}The three never repeat a model and effort pair.{{end}} Do not add an expensive route merely to fill the field |
+| CONSULT BUDGET ID | stable across the user-approved scope envelope, plan versions, stages, handoffs, Fix loops, owner changes, compaction, and elapsed time; only materially new user-approved scope creates a new ID |
+| CONSULT LIMIT | resident cap: all scopes `1; 2`; Consequential scopes `2; 3`; plus exact user-authorized additions. Capacity is not a target |
+| CONSULT USED | monotonic ledger counters: every issued launch request spends an attempt; substantive advice spends one batch, including partial advice. Neither agreement nor exit 0 controls charging. Conflicts freeze original remaining allowance until evidence resolves them; never choose whichever row permits a call |
+| CONSULT GRANTS | retain each exact user-authorized batch/attempt addition, authorization, route/fallback restrictions, and any model-specific approval{{if .Codex}} such as an Astra grant{{end}}; no counter resets. A pending request is nonblocking for safe work, and a later grant is portable across stages in the same scope but never retroactive.{{if .Codex}} No Astra reply means not granted, not a general advisor block{{end}} |
+| CONSULT LEDGER | durable owner-maintained path outside disposable worktrees; embed all accounting state here even if path is inaccessible to next owner |
+| CONSULT STATE | consistent or conflicted; preserve original conflicting records, uncertainty and frozen allowance separately from explicit additional grants |
+| CONSULT TRIGGER | exact resident-core trigger that fired, or `none`; allowance state and fallback are never triggers |
+| CONSULT BATCH ID | stable across the initial attempt and its one permitted fallback; a fallback never creates a new batch |
+| CONSULT SCOPE | decision checkpoint plus every then-known eligible boundary/question bundled into the batch |
+| CONSULT STATUS | `not triggered` unless an exact resident-core trigger fired; exposure/shape/stage/unused capacity never trigger. Use `required`, `partial`, `covered`, or `exhausted` only with evidence; a charged batch need not cover all questions |
+| ADVISOR ALLOWANCE HISTORY | newest-first selection evidence for every batch: batch ID, time, the declared plan behind the route order, and any usage-limit or unavailable-model messages observed; unobserved allowance is `unknown`; carry all prior entries and never bind a later batch |
+| CONSULT COVERAGE | actual decision/boundary coverage -> batch ID; list unanswered questions. A partial report can consume capacity without clearing a required review |
+| CONSULT HISTORY | every attempt, newest first: batch ID, trigger, attempt, executing provider, advisor provider/model/effort, CLI or harness transport, diversity (cross-provider/same-provider fallback/unknown), sanitized command or spawn specification/child ID, observed exit status or harness terminal state, failure reason, report status (`none`, `partial`, `complete`), actual coverage, and counter changes. Reasons include usage limit/429, auth, launch, provider, timeout, incomplete, cancelled; no invented exit codes or token usage. Preserve prior failures and evidence required to reconsider routes. Cite `$PROMPT` literally; never contents/secrets |
+| DELEGATION STATE | worker/advisor role, task-owned worktree paths/branches, worker liveness, integration commits, preserved work, cleanup complete or blocked with reason/recovery path; `none` if unused |
+| WHY | header only: why this model and effort. If the declared plan allowance or an observed usage limit changed the order of comparable routes, say which |
+| PROMPT | fenced `md`; begins with the exact active-workflow and mandatory-skill lines; contains receiving stage, exposure/shape, task and complete budget/grant/history/delegation state without relying on the short header; excludes model recommendations and WHY; self-contained; no `PASTE BACK` |
+
+Every handoff names the next `/handoff` in `EXPECTED OUTPUT` — except Verify Implementation, which offers Plan Next Version instead. A handoff missing that is incomplete.
+
+Keep historical executing-provider identity inside advisor attempt records where needed to establish diversity; it is not the receiver’s identity. Ordinary sender identity does not belong in the prompt.
+
+Launching a stage owner via {{if .Both}}`codex exec` or `claude -p`{{else if .Claude}}`claude -p`{{else}}`codex exec`{{end}}: pass the entire fenced `PROMPT:`, from `HANDOFF WORKFLOW` through `EXPECTED OUTPUT`. A consult call instead receives only the compact batch packet required by the `consult` skill.
+
+## Implement → Verify
+
+The verifier has no shared context — anything omitted is unavailable to it. The prompt must carry:
+
+- what changed, by functional area
+- exact files to inspect
+- checks passed / failed / blocked, and why blocked ones are environmental rather than implementation failures
+- committed / uncommitted / staged state
+- commit hash, or the exact no-commit reason
+- residual risks
+
+## Next handoff
+
+| Completing | `NEXT HANDOFF TO WRITE` / `EXPECTED OUTPUT` |
+|---|---|
+| Plan | `/handoff` Verify Plan |
+| Verify Plan | `/handoff` Implement |
+| Implement | `/handoff` Verify Implementation, or Fix if the retry failed |
+| Verify Implementation | offer only: `Next handoff available: Plan Next Version — <one phrase>` |
+| Fix | `/handoff` Verify Implementation |
+| Plan Next Version | `/handoff` Plan, or `DONE: no further handoff recommended` |

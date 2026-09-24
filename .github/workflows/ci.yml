@@ -1,0 +1,48 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      # Set only in the private staging repository; public CI scans generic patterns.
+      DENYLIST: ${{ secrets.AGENTFILE_PRIVATE_DENYLIST }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: gofmt
+        if: runner.os != 'Windows'
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+      - run: go vet ./...
+      - name: private disclosure terms
+        if: env.DENYLIST != ''
+        shell: bash
+        run: printf '%s\n' "$DENYLIST" > "$RUNNER_TEMP/denylist" && echo "AGENTFILE_PRIVATE_DENYLIST=$RUNNER_TEMP/denylist" >> "$GITHUB_ENV"
+      - run: go test -v ./...
+
+  cross-compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: build every release target
+        run: |
+          for target in darwin/amd64 darwin/arm64 linux/amd64 linux/arm64 windows/amd64 windows/arm64; do
+            GOOS=${target%/*} GOARCH=${target#*/} CGO_ENABLED=0 go build -trimpath -o /dev/null ./cmd/agentfile
+            echo "built $target"
+          done

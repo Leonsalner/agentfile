@@ -1,0 +1,209 @@
+{
+  "schema": 1,
+  "reviewed": "2026-09-23",
+  "models": [
+    {
+      "name": "Opus 5.5",
+      "short": "Opus",
+      "provider": "anthropic",
+      "cli_model": "opus",
+      "efforts": "low/medium/high/xhigh/max",
+      "advisor": true,
+      "role": {
+        "both": "strongest regular owner. Low for bounded or checkable semantic work; medium for exploratory or weakly checked work; high for demonstrated hard/deep work. Its low→medium gap is wide, so use low only with a strong checker.",
+        "single": "strongest regular owner. Low for bounded or checkable semantic work; medium for exploratory or weakly checked work; high for demonstrated hard/deep work. Its low→medium gap is wide, so use low only with a strong checker."
+      }
+    },
+    {
+      "name": "Sol",
+      "short": "Sol",
+      "provider": "openai",
+      "cli_model": "gpt-6-sol",
+      "efforts": "low/medium/high/xhigh/max/ultra",
+      "advisor": true,
+      "role": {
+        "both": "behaves like a smaller model that scales well with effort while staying token- and time-efficient. Raise Sol effort freely: medium for Bounded work, high/xhigh for Standard work, max before Astra. Prefer raising Sol's effort over switching to a pricier model when Sol is suitable.",
+        "single": "behaves like a smaller model that scales well with effort while staying token- and time-efficient. Raise Sol effort freely: medium for Bounded work, high/xhigh for Standard work, max before Astra. Prefer raising Sol's effort over switching to a pricier model when Sol is suitable."
+      }
+    },
+    {
+      "name": "Luna",
+      "short": "Luna",
+      "provider": "openai",
+      "cli_model": "gpt-6-luna",
+      "efforts": "low/medium/high/xhigh/max",
+      "advisor": false,
+      "role": {
+        "both": "very cheap and scales with effort, but time to first token rises sharply at high effort. Medium/high for small, well-specified implementation, deterministic verification, extraction and fixtures; xhigh/max as a fallback for Sol/Opus low–medium routes under allowance pressure. No judgment-heavy, ambiguous or consequential final calls.",
+        "single": "very cheap and scales with effort, but time to first token rises sharply at high effort. Medium/high for small, well-specified implementation, deterministic verification, extraction and fixtures; xhigh/max as a fallback for Sol low–medium routes under allowance pressure. No judgment-heavy, ambiguous or consequential final calls."
+      }
+    },
+    {
+      "name": "Astra",
+      "short": "Astra",
+      "provider": "openai",
+      "cli_model": "gpt-6-astra",
+      "efforts": "low/medium/high/xhigh/max/ultra",
+      "advisor": true,
+      "role": {
+        "both": "hardest tasks only, when Opus high or Sol max demonstrably falls short. Opus 5.5 and Sol match it at lower cost almost everywhere else. Every Astra use needs a demonstrated hard need, capable regular routes that failed or are unsuitable, and explicit per-scope user approval. Low or medium, one bounded call at a time; never parallel or sustained, never xhigh/max/ultra.",
+        "single": "hardest tasks only, when Sol max demonstrably falls short. Sol matches it at lower cost almost everywhere else. Every Astra use needs a demonstrated hard need, capable regular routes that failed or are unsuitable, and explicit per-scope user approval. Low or medium, one bounded call at a time; never parallel or sustained, never xhigh/max/ultra."
+      }
+    },
+    {
+      "name": "Sonnet 5",
+      "short": "Sonnet",
+      "provider": "anthropic",
+      "cli_model": "sonnet",
+      "efforts": "low/medium/high/xhigh/max",
+      "advisor": false,
+      "role": {
+        "both": "fallback only: low for mechanical work when the OpenAI allowance, and therefore Luna, is exhausted. Never a default.",
+        "single": "fallback only: low for mechanical work with a direct checker when the Opus allowance is under pressure. Never a default."
+      }
+    }
+  ],
+  "ladder": [
+    [{"model": "Luna", "effort": "medium"}],
+    [{"model": "Sol", "effort": "low"}, {"model": "Luna", "effort": "xhigh"}],
+    [{"model": "Luna", "effort": "max"}],
+    [{"model": "Sol", "effort": "medium"}],
+    [{"model": "Opus", "effort": "low"}, {"model": "Sol", "effort": "xhigh"}],
+    [{"model": "Sol", "effort": "max"}],
+    [{"model": "Opus", "effort": "medium"}, {"model": "Astra", "effort": "medium"}],
+    [{"model": "Opus", "effort": "high"}],
+    [{"model": "Opus", "effort": "xhigh/max"}]
+  ],
+  "evidence": {
+    "note": "[Artificial Analysis](https://artificialanalysis.ai/models) broad intelligence index / cost per task (a proxy for tokens, not a routing currency). Broad intelligence is not coding proof; on agentic coding the gap narrows.",
+    "columns": ["Luna", "Sol", "Opus", "Astra"],
+    "rows": [
+      {"effort": "low", "values": {"Luna": "21 / $0.005", "Sol": "34 / $0.13", "Opus": "42 / $0.55", "Astra": "46 / $0.82"}},
+      {"effort": "medium", "values": {"Luna": "29 / $0.02", "Sol": "40 / $0.25", "Opus": "51 / $1.34", "Astra": "50 / $1.54"}},
+      {"effort": "high", "values": {"Luna": "32 / $0.03", "Sol": "43 / $0.37", "Opus": "54 / $1.82", "Astra": "51 / $1.73"}},
+      {"effort": "xhigh", "values": {"Luna": "34 / $0.04", "Sol": "44 / $0.53", "Opus": "56 / $3.46", "Astra": "52 / $2.31"}},
+      {"effort": "max", "values": {"Luna": "37 / $0.07", "Sol": "48 / $1.06", "Opus": "58 / $5.98", "Astra": "53 / $3.26"}}
+    ]
+  },
+  "stages": [
+    {
+      "stage": "Plan, Micro",
+      "reorder": false,
+      "both": {"preferred": "skip; if useful Sol medium", "alternative": "Opus 5.5 low", "fallback": "Luna high", "escalate": "discovery or material design appears"},
+      "claude": {"preferred": "skip; if useful Opus 5.5 low", "alternative": "—", "fallback": "—", "escalate": "discovery or material design appears"},
+      "codex": {"preferred": "skip; if useful Sol medium", "alternative": "—", "fallback": "Luna high", "escalate": "discovery or material design appears"}
+    },
+    {
+      "stage": "Plan, Bounded",
+      "reorder": true,
+      "both": {"preferred": "Sol medium", "alternative": "Opus 5.5 low", "fallback": "Luna xhigh", "escalate": "unfamiliar surface or competing designs"},
+      "claude": {"preferred": "Opus 5.5 low", "alternative": "—", "fallback": "—", "escalate": "unfamiliar surface or competing designs"},
+      "codex": {"preferred": "Sol medium", "alternative": "—", "fallback": "Luna xhigh", "escalate": "unfamiliar surface or competing designs"}
+    },
+    {
+      "stage": "Plan, Standard",
+      "reorder": true,
+      "both": {"preferred": "Sol xhigh", "alternative": "Opus 5.5 medium", "fallback": "—", "escalate": "deep ambiguity needs Opus high or Sol max"},
+      "claude": {"preferred": "Opus 5.5 medium", "alternative": "—", "fallback": "—", "escalate": "deep ambiguity needs Opus high"},
+      "codex": {"preferred": "Sol xhigh", "alternative": "—", "fallback": "—", "escalate": "deep ambiguity needs Sol max"}
+    },
+    {
+      "stage": "Plan, Deep",
+      "reorder": false,
+      "both": {"preferred": "Opus 5.5 high", "alternative": "Sol max", "fallback": "—", "escalate": "Astra, only when both demonstrably fall short"},
+      "claude": {"preferred": "Opus 5.5 high", "alternative": "—", "fallback": "—", "escalate": "Opus 5.5 xhigh, only when high demonstrably falls short"},
+      "codex": {"preferred": "Sol max", "alternative": "—", "fallback": "—", "escalate": "Astra, only when Sol max demonstrably falls short"}
+    },
+    {
+      "stage": "Verify Plan, Micro",
+      "reorder": false,
+      "both": {"preferred": "skip", "alternative": "—", "fallback": "—", "escalate": "user explicitly requests review"},
+      "claude": {"preferred": "skip", "alternative": "—", "fallback": "—", "escalate": "user explicitly requests review"},
+      "codex": {"preferred": "skip", "alternative": "—", "fallback": "—", "escalate": "user explicitly requests review"}
+    },
+    {
+      "stage": "Verify Plan, Bounded",
+      "reorder": true,
+      "both": {"preferred": "Sol medium", "alternative": "Opus 5.5 low", "fallback": "Luna xhigh", "escalate": "semantics are broad or acceptance is weak"},
+      "claude": {"preferred": "Opus 5.5 low", "alternative": "—", "fallback": "—", "escalate": "semantics are broad or acceptance is weak"},
+      "codex": {"preferred": "Sol medium", "alternative": "—", "fallback": "Luna xhigh", "escalate": "semantics are broad or acceptance is weak"}
+    },
+    {
+      "stage": "Verify Plan, Standard",
+      "reorder": true,
+      "both": {"preferred": "Opus 5.5 medium", "alternative": "Sol xhigh", "fallback": "—", "escalate": "frontier synthesis needs Opus high or Sol max"},
+      "claude": {"preferred": "Opus 5.5 medium", "alternative": "—", "fallback": "—", "escalate": "frontier synthesis needs Opus high"},
+      "codex": {"preferred": "Sol xhigh", "alternative": "—", "fallback": "—", "escalate": "frontier synthesis needs Sol max"}
+    },
+    {
+      "stage": "Verify Plan, Deep",
+      "reorder": false,
+      "both": {"preferred": "Opus 5.5 high", "alternative": "Sol max", "fallback": "—", "escalate": "Astra, only when both demonstrably fall short"},
+      "claude": {"preferred": "Opus 5.5 high", "alternative": "—", "fallback": "—", "escalate": "Opus 5.5 xhigh, only when high demonstrably falls short"},
+      "codex": {"preferred": "Sol max", "alternative": "—", "fallback": "—", "escalate": "Astra, only when Sol max demonstrably falls short"}
+    },
+    {
+      "stage": "Implement, Micro",
+      "reorder": false,
+      "both": {"preferred": "Luna medium/high with a direct checker; Sol medium for semantic judgment", "alternative": "Opus 5.5 low", "fallback": "Sonnet 5 low if the OpenAI allowance is exhausted", "escalate": "no direct checker, unexpected coupling or diagnosis appears"},
+      "claude": {"preferred": "Opus 5.5 low", "alternative": "—", "fallback": "Sonnet 5 low for mechanical edits with a direct checker", "escalate": "no direct checker, unexpected coupling or diagnosis appears"},
+      "codex": {"preferred": "Luna medium/high with a direct checker; Sol medium for semantic judgment", "alternative": "—", "fallback": "—", "escalate": "no direct checker, unexpected coupling or diagnosis appears"}
+    },
+    {
+      "stage": "Implement, Bounded",
+      "reorder": false,
+      "both": {"preferred": "Sol medium; Opus 5.5 low for semantic judgment", "alternative": "the other of the two", "fallback": "Luna xhigh/max", "escalate": "the chosen route fails or must discover/decide"},
+      "claude": {"preferred": "Opus 5.5 low", "alternative": "—", "fallback": "—", "escalate": "the chosen route fails or must discover/decide"},
+      "codex": {"preferred": "Sol medium", "alternative": "—", "fallback": "Luna xhigh/max", "escalate": "the chosen route fails or must discover/decide"}
+    },
+    {
+      "stage": "Implement, Standard",
+      "reorder": false,
+      "both": {"preferred": "Sol xhigh with a strong checker; otherwise Opus 5.5 medium", "alternative": "the other of the two", "fallback": "—", "escalate": "failure cannot distinguish implementation from reasoning error"},
+      "claude": {"preferred": "Opus 5.5 medium", "alternative": "—", "fallback": "—", "escalate": "failure cannot distinguish implementation from reasoning error"},
+      "codex": {"preferred": "Sol xhigh with a strong checker; otherwise Sol max", "alternative": "—", "fallback": "—", "escalate": "failure cannot distinguish implementation from reasoning error"}
+    },
+    {
+      "stage": "Implement, Deep",
+      "reorder": false,
+      "both": {"preferred": "Opus 5.5 high", "alternative": "Sol max", "fallback": "—", "escalate": "Astra, only on task-specific evidence"},
+      "claude": {"preferred": "Opus 5.5 high", "alternative": "—", "fallback": "—", "escalate": "Opus 5.5 xhigh, only on task-specific evidence"},
+      "codex": {"preferred": "Sol max", "alternative": "—", "fallback": "—", "escalate": "Astra, only on task-specific evidence"}
+    },
+    {
+      "stage": "Verify Impl, Micro/Bounded",
+      "reorder": false,
+      "both": {"preferred": "Luna high for exact/deterministic checks; Sol medium or Opus 5.5 low for semantic review", "alternative": "matched route from other provider", "fallback": "Luna xhigh", "escalate": "regression surface is broad or evidence conflicts"},
+      "claude": {"preferred": "Opus 5.5 low", "alternative": "—", "fallback": "—", "escalate": "regression surface is broad or evidence conflicts"},
+      "codex": {"preferred": "Luna high for exact/deterministic checks; Sol medium for semantic review", "alternative": "—", "fallback": "Luna xhigh", "escalate": "regression surface is broad or evidence conflicts"}
+    },
+    {
+      "stage": "Verify Impl, Standard",
+      "reorder": true,
+      "both": {"preferred": "Opus 5.5 medium", "alternative": "Sol xhigh", "fallback": "—", "escalate": "hard uncovered issue needs Opus high or Sol max"},
+      "claude": {"preferred": "Opus 5.5 medium", "alternative": "—", "fallback": "—", "escalate": "hard uncovered issue needs Opus high"},
+      "codex": {"preferred": "Sol xhigh", "alternative": "—", "fallback": "—", "escalate": "hard uncovered issue needs Sol max"}
+    },
+    {
+      "stage": "Verify Impl, Deep",
+      "reorder": false,
+      "both": {"preferred": "Opus 5.5 high", "alternative": "Sol max", "fallback": "—", "escalate": "Astra, only on task-specific evidence"},
+      "claude": {"preferred": "Opus 5.5 high", "alternative": "—", "fallback": "—", "escalate": "Opus 5.5 xhigh, only on task-specific evidence"},
+      "codex": {"preferred": "Sol max", "alternative": "—", "fallback": "—", "escalate": "Astra, only on task-specific evidence"}
+    },
+    {
+      "stage": "Fix, named/checkable failure",
+      "reorder": false,
+      "both": {"preferred": "same route as Bounded implementation", "alternative": "matched route from other provider", "fallback": "Luna xhigh/max", "escalate": "diagnosis is unknown or first repair fails materially"},
+      "claude": {"preferred": "same route as Bounded implementation", "alternative": "—", "fallback": "—", "escalate": "diagnosis is unknown or first repair fails materially"},
+      "codex": {"preferred": "same route as Bounded implementation", "alternative": "—", "fallback": "Luna xhigh/max", "escalate": "diagnosis is unknown or first repair fails materially"}
+    },
+    {
+      "stage": "Plan Next",
+      "reorder": false,
+      "both": {"preferred": "skip when done; otherwise Sol medium", "alternative": "Opus 5.5 low", "fallback": "Luna high, only for an already-decided mechanical next step", "escalate": "next increment is Standard/Deep"},
+      "claude": {"preferred": "skip when done; otherwise Opus 5.5 low", "alternative": "—", "fallback": "—", "escalate": "next increment is Standard/Deep"},
+      "codex": {"preferred": "skip when done; otherwise Sol medium", "alternative": "—", "fallback": "Luna high, only for an already-decided mechanical next step", "escalate": "next increment is Standard/Deep"}
+    }
+  ]
+}

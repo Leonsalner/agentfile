@@ -1,0 +1,65 @@
+---
+name: routing
+description: Mandatory before any stage action in an active handoff workflow; otherwise use before choosing a model or stage owner, including escalation and allowance fallback.
+---
+
+## Model routing
+
+Choose for task quality, total tokens, time and plan allowance, never API list prices. Pick the lowest capable rung on the capability ladder that has a reliable success signal and reroute once when evidence shows it is insufficient.{{if .Both}} Effort names are not comparable across models: Sol low is a tier below Opus low, and Sol medium roughly matches Opus low.{{end}}
+
+**Roster** (selected agents: {{.AgentList}}):
+
+{{range .Models}}- **{{.Name}}** ({{.Efforts}}) — {{.Role}}
+{{end}}
+**Capability ladder** (approximate, weakest first): {{.Ladder}}.
+
+**Evidence and limits.** {{.Evidence.Note}}
+
+{{.Evidence.Table}}
+{{if .Both}}
+In OpenAI-reported results, Sol xhigh leads AutomationBench and Sol max roughly matches frontier Anthropic models on DeepSWE, with Luna max close behind. These are vendor-run and compare earlier model versions.
+{{else if .Codex}}
+In OpenAI-reported agentic coding results, Sol at xhigh/max leads and Luna max stays close behind. These are vendor-run.
+{{end}}
+| Stage / shape | Preferred | {{.AlternativeHeader}} | Allowance fallback | Escalate when |
+|---|---|---|---|---|
+{{range .Stages}}| {{.Stage}} | {{.Preferred}} | {{.Alternative}} | {{.Fallback}} | {{.Escalate}} |
+{{end}}
+Allowance fallbacks apply only when the preferred{{if .Both}} and alternative routes are{{else}} route is{{end}} under material allowance pressure or exhausted, and only for work the fallback can handle; they never replace a judgment-heavy route.{{if .Codex}} Luna is also the default for Codex worker subagents on mechanical or extraction tasks.{{end}}
+
+**Shape test.** Micro requires an explicit outcome, tiny named surface, no discovery and a direct checker. Bounded requires a small familiar surface, close specification, reversibility and strong acceptance criteria. Standard begins with meaningful exploration, cross-file coupling, debugging, non-trivial design or a weak success signal. Deep is ambiguous long-horizon work, security architecture, difficult concurrency or consequential migration design.
+
+Do not restart a stage merely because its shape rises. Continue safe inspection, then reroute the next owner/run when the current route lacks enough capability. A cheaper attempt that produces usable evidence is not wasted; include that evidence in the reroute. After one failure, do not repeat the materially identical attempt.
+
+Exposure controls action gates, not model intelligence. A Consequential but tiny action may be Micro yet still needs its boundary check; a difficult Local refactor may be Deep without requiring permission. Consult targets: {{.AdvisorList}}; use the consult skill. Fix follows Implement; Plan Next follows Plan.
+
+## Plan allowance
+
+These routes were generated from the plan you declared; agentfile never inspects accounts or queries live usage. A declared plan is a routing hint, not proof that a model is enabled in the account.
+
+{{range .Allowance}}- **{{.Client}} — {{.Plan}}.** {{.Guidance}} {{.Credits}}
+{{end}}{{if .OrderNote}}
+{{.OrderNote}}
+{{end}}
+First select every route capable of the task; the declared plan may only order comparable suitable routes and decide how sparingly to spend a limited allowance. It never makes an incapable route eligible, never lowers the capability rung the task requires, and never makes an expensive model the default without a task-specific reason.
+
+When the client reports a usage limit, or a recommended model is unavailable in the client or account, take the next capable route in the table{{if .Both}} (including the other provider's route){{end}}, or a listed allowance fallback where the work fits. If none remains, stop and tell the user which model or allowance is missing. Never invent a route from a model name or plan label.
+
+## Advisor route
+
+After a valid trigger, choose task-suitable advisor models.{{if .Claude}} Use Opus 5.5 low only for a narrow, bounded question with supplied evidence and a checkable conclusion; use Opus 5.5 medium when the advisor must explore tradeoffs or diagnose from incomplete evidence, and Opus 5.5 high only for demonstrated hard security architecture, concurrency, migration or irreversible analysis.{{end}}{{if .Codex}} Use Sol medium only for a narrow, bounded question with supplied evidence and a checkable conclusion; use Sol high/xhigh when the advisor must explore tradeoffs or diagnose from incomplete evidence, and Sol max only for demonstrated hard security architecture, concurrency, migration or irreversible analysis. Astra additionally requires explicit model-specific user approval for that scope, and only when {{if .Both}}those routes demonstrably fall{{else}}Sol max demonstrably falls{{end}} short; ordinary advisor capacity never authorizes it. Emit `ASTRA REQUEST: <scope> — <specific frontier need>` and continue safe work while pending. No reply or a refusal means Astra is not granted, consumes no attempt, and does not exclude eligible {{if .Both}}Opus or Sol{{else}}Sol{{end}} advice.{{end}} Spare allowance alone never justifies effort or model escalation. {{.NonAdvisors}}
+
+Build one frozen list of at most two eligible routes. Explicit model/transport restrictions narrow the list first. Identify the actual executing provider from launch/harness metadata; unknown identity cannot establish cross-provider review.
+{{if .Both}}
+- Prefer the other provider's advisor. Within a provider, prefer an eligible isolated read-only harness advisor; otherwise use the provider's CLI.
+- Without an explicit cross-provider requirement, reserve the second slot for one same-provider fallback when available, preferring an eligible harness subagent over another CLI process. If no cross-provider route exists, the same-provider fallback can be the initial and only candidate.
+- For an explicit cross-provider requirement, exclude same-provider and unknown-independence routes. If required review cannot be obtained, stop-and-ask. Consequential exposure alone never triggers a call.
+{{- else}}
+- Only {{.OnlyProvider}} models are selected, so every advisor is a same-provider, non-independent advisor; label it so. Prefer an eligible isolated read-only harness advisor over a CLI process.
+- An explicit cross-provider requirement cannot be met with the selected agents: stop and ask the user. Consequential exposure alone never triggers a call.
+{{- end}}
+- Harness eligibility requires a known suitable model/provider, no inherited conversation, read-only permissions, and observable completion/cancellation. If those are unavailable, do not invent harness support.
+- Do not fill two slots with different transports of the same account. A usage-limit or auth failure excludes every transport that shares the failed account. Never add candidates after a failure. A changed boundary may only remove candidates.
+- Exclude unsuitable, already-attempted-in-this-batch, non-fresh, and non-read-only routes. Prior auth/launch failures remain excluded until evidence shows the cause corrected; prior transient failures can be reconsidered only for an independently eligible later batch. Honor explicit grant route/fallback restrictions.
+
+Route or transport changes never change model quality, reset budget, or authorize another call.

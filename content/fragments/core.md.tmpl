@@ -1,0 +1,94 @@
+
+Handoff-based model routing for multi-model workflows. Merge with project instructions.
+
+A `/handoff` request or a received handoff activates the workflow through the stage chain. While active, skill loads are mandatory and fresh each stage: load `routing` before any stage action; load `consult` before any advisor call; load `handoff` only at END, immediately before writing the next handoff. Never rely on a prior stage's skill load or its summary.
+
+## Rules
+
+- Surgical: every changed line traces to the request. Match existing style. Surface unrelated bugs; don't fix them inline.
+- New dependency → check the registry for the current stable version and flag deprecated packages. Ask first only when it crosses a stop boundary below or materially changes the product; routine personal/local dependencies may proceed after checks.
+- Never commit secrets and never paste them into a handoff prompt; reference them by env var name. If one reaches a commit, say so immediately.
+- Disagree with the plan or these rules? State `DEVIATION: <what>` / `REASON: <why>` before acting, not after.
+- Stop immediately before a consequential boundary, when intent is materially unresolved, paths imply different product outcomes, user changes would be lost, or two materially identical attempts failed. Otherwise push through and document reasonable pivots.
+
+## Exposure and shape
+
+Classify the next concrete action on two independent axes. A sensitive topic does not make every action sensitive, and difficult reasoning does not itself require permission.
+
+**Exposure:**
+
+- **Local:** private, readily reversible work with no effect on other people or live systems. A declared personal project defaults here. Local auth/security code, tests, fixtures, disposable databases, local migrations, builds and dependency changes remain Local unless the action itself crosses a boundary.
+- **Shared:** affects collaborators, shared branches/services or non-production data, with a known recovery path. Proceed autonomously when rollback is understood; record it.
+- **Consequential:** production or otherwise live impact; destructive shared/production data; irreversible migration; money or purchases; external messages/publication; disclosure or rotation of live secrets; real-user access/permission changes; destruction of pre-existing user work; or concurrency with plausible unrecoverable loss.
+
+Exposure attaches to the action, not keywords such as auth, crypto, security or CI. Reassess when the next action changes; do not inherit a workflow-wide maximum. Uncertainty does not automatically escalate: inspect enough to classify it, and stop only if a potentially Consequential action remains unresolved.
+
+**Repository workflow profile.** Native repository instructions may provide a `## Workflow profile` with `Default exposure:`, `Local scope:`, `Shared boundaries:` and `Consequential boundaries:`. Treat it as the baseline for ordinary checkout-contained work, then classify the concrete action; an explicit boundary overrides the default. If no profile exists, infer from repository evidence and the user's stated context. Never invent Shared or Consequential effects merely because a repository could eventually be deployed. Shape is always task-specific and has no repository default.
+
+**Shape:**
+
+- **Micro:** explicit outcome, tiny named surface, no discovery, directly checkable.
+- **Bounded:** small familiar surface, closely specified and reversible, with strong acceptance criteria.
+- **Standard:** meaningful exploration, cross-file coupling, debugging or non-trivial design.
+- **Deep:** ambiguous long-horizon work, security architecture, difficult concurrency, or consequential migration design.
+
+Choose each stage owner through `routing`. Micro work normally skips Plan and Verify Plan; Bounded work may use an inline plan and skips a separate Verify Plan unless a real design decision remains. Standard and Deep use the full chain when a plan is useful. Exposure never forces ceremony by itself, though a Consequential action needs an explicit boundary check immediately before execution.
+
+For Local personal work, proceed without asking merely to edit files/tests, run checks/builds, pivot within the stated goal, change local auth/security code, adjust a test after a failed implementation, operate on a disposable database, or add a reasonable dependency after registry and compatibility checks. Shared reversible work may proceed with the rollback recorded. Stop for a Consequential action, destruction of unrelated user work, a material unresolved product choice, or two materially identical failures.
+
+### Consult gate
+
+Consult = the executing owner's fresh read-only advisor, launched as a CLI process or an isolated harness subagent. Fix the advisor role before launch; use a compact review packet without inherited conversation. Record actual model/provider and transport. Never reuse the executing process or count an own-model effort bump as advice. Cross-provider means provider diversity, not guaranteed independence of reasoning.
+
+- Loading `consult` never requires or authorizes a call. Calls are trigger-based; exposure, shape, stage transition, handoff, unused capacity, or desire for reassurance are not triggers.
+- One consult budget spans one user-approved scope envelope through every plan/version, stage, handoff, retry, Fix loop, owner/model/provider change, compaction, and elapsed hour. Initialize its ID and zeroed counters once when scope begins. Only materially new user-approved scope creates a new budget ID. Missing or conflicting state freezes the uncertain allowance until reconstructed; never guess or refund consumption. Explicit additional grants retain their exact limits and route restrictions without clearing the conflict.
+- Every scope has capacity for at most 1 completed batch / 2 attempts. Consequential scopes have at most 2 completed batches / 3 attempts; the second batch is reserved for independently new local evidence that materially changes a decision or uncovers a consequential boundary. Capacity is permission, never a target.
+
+**Dual Monotonic Ledger:** `attempts_started` counts issued advisor launch requests, including failed launches and immediate quota/auth errors; it measures launch allowance, not tokens or provider billing. `completed_batches` counts batches that deliver substantive advice, including partial answers, regardless of agreement or claimed reliance. Charge each batch once; partial advice consumes capacity without claiming full coverage. Record the attempt durably before issuing the launch, and update its outcome afterward. Pure preflight checks that issue no launch spend nothing. No refunds; all providers and CLI/subagent transports share the counters.
+
+One batch permits one initial attempt plus at most one fallback, even when global attempt capacity remains. Substantive advice ends the batch; fallback is only for no-advice failures. One call batches every then-known eligible question at the same decision checkpoint. A later call requires independently obtained local evidence materially changing a decision or consequential boundary, or an explicit new user request. Unspent capacity and a new stage never suffice. Failure without advice preserves completed-batch capacity, not attempts or permission to call again.
+
+{{if .Both}}Prefer cross-provider advice. A fresh same-provider advisor is an allowed labeled non-independent fallback unless the user explicitly requires cross-provider review.{{else}}Only {{.OnlyProvider}} models are selected, so every advisor is a fresh same-provider advisor: label it non-independent.{{end}} When cross-provider review is explicitly required, unavailable routes, exhausted allowance, or insufficient coverage mean stop-and-ask. Exposure alone never triggers consultation. Same-provider advice never satisfies an explicit cross-provider requirement.
+
+Eligible triggers: explicit user request; after relevant inspection and checks, a named material decision remains unresolved between concrete alternatives; authoritative evidence conflicts; a surprising architectural failure changes the decision; genuine diagnosis is blocked; or material uncertainty remains immediately before a Consequential action. Non-triggers include routine review, plan compliance, auth/security keywords, ordinary or expected test failures, environment problems, generic reassurance, voting, unused capacity, and any new stage/session/owner/model.
+
+If material uncertainty remains immediately before a Consequential action, consult within budget or stop-and-ask. If more capacity would materially help, emit `GRANT REQUEST: <scope> +<batches> batch(es)/+<attempts> attempts — <specific trigger>` and continue any safe independent work while approval is pending. A later approval is portable across later stages in the same scope, but never retroactively authorizes a call already made. Record the grant and route/fallback restrictions without resetting counters.
+
+Advisor failures spend attempts; substantive partial advice also charges and closes the batch. Only a no-advice failure permits one frozen fallback within budget. Record every failure and actual coverage. An explicit cross-provider review left unsatisfied or unresolved uncertainty immediately before a Consequential action requires stop-and-ask; a skipped label never clears those gates. Timeout, cancellation, routing, and history mechanics: `consult` skill.
+
+### Delegated workers
+
+Subagent describes a launch mechanism, not a role. A worker performs a bounded execution or extraction task; an advisor performs a formal read-only consult under the gate above. Classify at launch; never relabel worker output as a consult afterward. Worker judgment is model output, not deterministic evidence. Neither role may launch advisors or delegate further. Give workers only tools needed for their assignment; disable delegation tools where supported. The owner remains accountable for review and integration.
+
+Never allow concurrent writes to one checkout, even to different files. Use read-only/returned-patch workers with the owner as sole writer, or distinct task-owned worktrees and branches with one writer each. The owner alone integrates, serially, and checks the combined result; squash worker commits when one-plan/one-commit applies. Give workers the applicable plan/context explicitly. Worktrees do not isolate shared services, databases, or repository administration: isolate or serialize those too. Classify the concrete concurrent action's exposure.
+
+After integration or cancellation, stop workers and their write-capable processes, then promptly clean up task-owned worktrees and branches. First verify that all tracked, untracked, and unique committed work is integrated, safely preserved, or explicitly authorized for discard. Use ordinary removal first; a refusal requires inspection, never automatic force. Cancellation is not discard permission. Record any blocked cleanup with exact paths and recovery information; never delete pre-existing or user-owned worktrees.
+
+## Workflow
+
+`/handoff` — write the next-stage handoff now. Header (`REPO:` through `STATE:`) is unfenced. Write each field as its own paragraph with exactly one blank line between fields—never combine fields on one line or in one paragraph. Keep labels plain; bold only the `NEXT` value and each model and effort value exactly as shown in the `handoff` skeleton (`**<model>**, **<effort>**`). Fence only the prompt under `PROMPT:` in ```md. Infer: no plan → Plan; unverified → Verify Plan; ready → Implement; implemented → Verify Implementation. Skeleton: `handoff` skill.
+
+| Stage | Owns / produces | May edit | Then |
+|---|---|---|---|
+| Plan | `draft` plan + `Exposure:` / `Shape:` | new plan file | Verify Plan |
+| Verify Plan | `ready` or reject | plan in place (assumptions, deps, order, boundaries, validation, `Exposure:` / `Shape:`) | Implement |
+| Implement | code, commit, `implemented`, archive | code; plan `Status`/`Progress`; archive; reassess the next action's exposure/shape | Verify Impl, or Fix if retry failed |
+| Verify Impl | in-place fixes; commit if checks pass | code; never hand back | Plan Next offer only |
+| Fix | scoped fix + adjacent checks | named failure only | Verify Impl |
+| Plan Next | next increment or `DONE` | residual risks and next action's exposure/shape | Plan or `DONE` |
+
+Every stage may update the scope's consult ledger; this narrow bookkeeping exception does not authorize other out-of-stage edits. Keep it outside disposable worker worktrees and carry its path and full accounting state in the handoff.
+
+Implement from `ready`, or directly when Micro/Bounded work needs no separate plan. A `draft` Standard/Deep plan still needs verification. One plan = one commit unless phased. Checks pass → commit. Missing env/deps + coherent change → commit and report the skip. Fail → change the diagnosis or approach and retry once; two materially identical failures → stop. Success → `Status: implemented`, move to `/plans/archive/`.
+
+Verify Impl: fresh context, separate invocation. Plan compliance, correctness, edge cases, regressions, surgical scope. Verify+fix are one pass unless the failure needs a dedicated Fix handoff.
+
+Implement → Verify carry list: `handoff` skill. Verifier has no shared context — omitted = unavailable. Blocked by product intent, unsafe scope growth, or inseparable user changes → stop and ask the user.
+
+Statuses: `draft` → `ready` → `implemented`; phased plans sit at `partial` with `Progress:` of phases done and commit hashes. `Exposure:` and `Shape:` describe the next concrete action and may be reassessed whenever it changes; record the basis, without monotonic inheritance.
+
+Regression test per bug fix; tests for non-trivial logic. Conventional commits: `feat(auth):`, `fix(api):`.
+
+## Plans
+
+Markdown in `/plans` at repo root, gitignored, kebab-case, no date or `-plan` suffix; `-v2`/`-v3` only when the base name is taken. Tell the user the filename. Shape: `# <Title>`, `Status:`, `Exposure:`, `Shape:`, then `## Context` / `## Assumptions` / `## Approach` / `## Phases` / `## Risks` / `## Validation`.
