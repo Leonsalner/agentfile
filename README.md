@@ -125,9 +125,9 @@ control lists:
 - An existing managed file is updated **in place**: agentfile opens that
   file without following links, checks that it is still the same file with the
   contents shown in the preview, and rewrites its bytes. It never replaces an
-  existing file by renaming. This is intended to retain its owner, access
-  control list, integrity label, audit settings and attributes; the native
-  Windows tests below must verify that before release.
+  existing file by renaming. This keeps its owner, access control list,
+  integrity label, audit settings and attributes; native Windows tests check
+  this (see below).
 - A missing managed file is created with new default metadata. Restore
   removes a file the install created only if its contents still match what
   agentfile wrote. Otherwise the file is listed as a conflict and kept unless
@@ -158,15 +158,19 @@ control lists:
   restore, are kept but not restored or recovered by this build. agentfile
   says so and changes nothing. Inspect them in the backup folder by hand.
 
-The Windows behavior above still needs native Windows CI runs before release,
-including the owner, access control list, label and audit cases.
+CI runs the Windows behavior above natively on GitHub's hosted Windows
+runner, including the owner, access control list, integrity label and audit
+cases. That runner uses an administrator account; behavior under an ordinary
+user account is not tested separately. Refusing a symbolic-link `SKILL.md` is
+tested on macOS and Linux only, because creating the link needs extra
+privileges on Windows.
 
 ## Supported metadata and current limits
 
 On macOS and Linux, agentfile rejects inspected properties it cannot recreate
-before replacing an existing path. Linux inode flags are not yet inspected;
-the Linux column needs Linux CI runs before release. The Windows column
-describes content-only mode.
+before replacing an existing path. Linux inode flags are not yet inspected.
+CI runs the Linux extended-attribute and POSIX ACL cases natively. The Windows
+column describes content-only mode.
 
 | | macOS | Linux | Windows (contents only) |
 |---|---|---|---|
