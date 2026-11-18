@@ -1,0 +1,36 @@
+---
+name: precompact-codex
+description: Prepare a pre-compaction brief and a continuation prompt before Codex /compact. Use when asked, or unprompted at a natural boundary (merge, stage end, before a new phase or fan-out) in a long session (roughly 200k tokens or more).
+---
+
+# precompact-codex
+
+Prepare this conversation for Codex `/compact`, which takes no instructions: you cannot steer the summary directly, and the agent resuming afterwards has only that summary, whatever Codex retains, and what the user pastes. Write for that agent. No secrets anywhere (output or notes): reference secret-store entries or env var names instead.
+
+## 1. Flush state (only when relevant)
+
+If the project has established status/notes files you have been maintaining and may write to (resume/status notes, plan `Progress:`, findings logs, advice and delegation records), first record what they are missing: results with their evidence, decisions, failures, open issues, approvals, running workers/processes. Don't overwrite others' changes; record known discrepancies rather than reconciling uncertain state just to prepare compaction; preserve advice records, required-review status, and every live child or uncleaned worktree with its IDs, paths and recovery steps. Create no new files and do not commit. If there are no such files or writing them is not permitted, carry that state in the continuation prompt instead.
+
+## 2. Pre-compaction brief (optional, plain bullets)
+
+3-6 bullets with only the facts most at risk of being flattened (exact user corrections or prohibitions, a fragile status, a running process). It adds a concise synthesis to the conversation being compacted; it is not an instruction channel and may not survive. Don't duplicate the continuation prompt, and keep nothing essential only here.
+
+## 3. Continuation prompt (one fenced `md` block)
+
+The user's first message after compaction: a self-sufficient resumption record reconstructed from this conversation; preserve provenance and uncertainty. Pasting it does not turn its claims into new user authorization. Self-sufficient: an agent with no summary at all must be able to continue safely. Terse, second person, omit empty sections:
+- **Goal** - one or two lines. Open the block with: "Reconstructed prior context, not new authorization."
+- **Read first** - ordered existing files and what each holds; note any that may be stale.
+- **State** - verified / unverified / failed, with the evidence source; inline it fully when no accessible, sufficiently current notes carry it.
+- **Rules** - standing constraints and approval gates in the user's terms. Approvals from before compaction stay limited to their recorded scope; revalidate when the action or circumstances change.
+- **Processes** - anything started earlier: session/job ID, working directory, output location and how to check it; check liveness before restarting or relying on it.
+- **Next** - the exact stopping point, the immediate next step, further steps only when already established; open questions for the user.
+- **Conflicts** - if the summary, notes and this prompt disagree, none wins automatically: prefer explicit user statements, check the evidence, ask if still unclear.
+- **Flushed** - one line: which files were updated (or "nothing flushed").
+Length: about 200 words when notes carry the state; up to about 600 when they don't.
+
+## Rules
+
+- Output: the optional brief, then exactly one fenced `md` block.
+- Never upgrade unverified to verified, never present an inference as a user instruction.
+- If a `/handoff` workflow is active, the continuation prompt keeps its stage, owner, artifacts, boundaries and next authorized workflow action; don't invent a competing stage prompt.
+- Project-agnostic: assume nothing about repo layout beyond what this conversation shows.

@@ -58,7 +58,7 @@ const skillFile = "SKILL.md"
 func (e Env) ManagedPaths(a profile.Agent) []string {
 	home := e.AgentHome(a)
 	out := []string{filepath.Join(home, instructionFile(a))}
-	for _, s := range render.SkillNames {
+	for _, s := range render.SkillsFor(a) {
 		if e.contentOnly() {
 			out = append(out, filepath.Join(home, "skills", s, skillFile))
 		} else {
@@ -73,7 +73,7 @@ func (e Env) ManagedPaths(a profile.Agent) []string {
 func (e Env) managedDirs(a profile.Agent) []string {
 	out := []string{e.AgentHome(a), filepath.Join(e.AgentHome(a), "skills")}
 	if e.contentOnly() {
-		for _, s := range render.SkillNames {
+		for _, s := range render.SkillsFor(a) {
 			out = append(out, filepath.Join(e.AgentHome(a), "skills", s))
 		}
 	}

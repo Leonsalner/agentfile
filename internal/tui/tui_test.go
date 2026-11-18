@@ -100,7 +100,7 @@ func TestInstallFlowNeverAsksForModels(t *testing.T) {
 		t.Fatalf("profile not captured: %+v %+v", m.prof.Claude, m.prof.Codex)
 	}
 	view := m.render()
-	for _, p := range []string{"CLAUDE.md", "AGENTS.md", "routing", "handoff", "consult"} {
+	for _, p := range []string{"CLAUDE.md", "AGENTS.md", "routing", "handoff", "delegate", "consult", "subagents", "dialogue", "precompact", "precompact-codex"} {
 		if !strings.Contains(view, p) {
 			t.Errorf("preview missing %s", p)
 		}
@@ -117,7 +117,7 @@ func TestInstallFlowNeverAsksForModels(t *testing.T) {
 		t.Fatal("expected confirmation")
 	}
 	m = press(t, m, "y")
-	if m.scr != scrResult || !strings.Contains(m.result, "Installed 8 entries") {
+	if m.scr != scrResult || !strings.Contains(m.result, "Installed 16 entries") {
 		t.Fatalf("install result: %s", m.result)
 	}
 	b, err := os.ReadFile(filepath.Join(home, ".codex", "skills", "routing", "SKILL.md"))

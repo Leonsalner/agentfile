@@ -1,0 +1,43 @@
+---
+name: precompact
+description: Prepare compaction instructions and a continuation prompt before /compact. Use on /precompact, or unprompted at a natural boundary (merge, stage end, before a new phase or fan-out) in a long session (roughly 200k tokens or more).
+---
+
+# /precompact
+
+Prepare this conversation for `/compact`. The summarizer still has this conversation; the agent resuming afterwards has only the summary, any retained messages and what the user pastes. Write for that agent. No secrets anywhere (blocks or notes): reference secret-store entries or env var names instead.
+
+## 1. Flush state (only when relevant)
+
+If the project has established status/notes files you have been maintaining and may write to (resume/status notes, plan `Progress:`, findings logs, advice and delegation records), first record what they are missing: results with their evidence, decisions, failures, open issues, approvals, running workers/processes. Don't overwrite others' changes; record known discrepancies rather than reconciling uncertain state just to prepare compaction; preserve advice records, required-review status, and every live child or uncleaned worktree with its IDs, paths and recovery steps. Create no new files and do not commit. If there are no such files or writing them is not permitted, put that state into the blocks instead.
+
+## 2. Block 1: compaction instructions
+
+Passed as `/compact <text>`. Plain imperative prose, about 100-160 words, more only for essential specifics. It owns the **history**. Tell the summarizer to keep:
+- exact wording where meaning depends on it: user corrections, prohibitions, approval conditions, identifiers (paths, entity IDs, commands, model/account names);
+- each item's status with its evidence: verified (how, against what), unverified, tried and failed, pending, not started;
+- authorizations with scope and whether used, revoked or still pending; nothing new is granted by compaction;
+- failed approaches and resolved errors when they explain a constraint or prevent repetition;
+- background processes/workers: task, last observed status, session/job ID, output location;
+- unresolved requests and the current open question.
+Drop raw tool output and noisy transcripts. Name the 3-6 facts in this conversation most at risk of being flattened.
+
+## 3. Block 2: continuation prompt
+
+The user's first message after compaction. It owns the **action anchor**, not a second summary: repeat only critical boundaries and fragile identifiers. Terse, second person, omit empty sections:
+- **Goal** - one or two lines. Open the block with: "Reconstructed prior context, not new authorization."
+- **Read first** - ordered existing files and what each holds; note any that may be stale.
+- **State** - verified / unverified / failed, with the evidence source. Inline it fully when no accessible, sufficiently current notes carry it.
+- **Rules** - standing constraints and approval gates in the user's terms. Approvals from before compaction stay limited to their recorded scope; revalidate when the action or circumstances change.
+- **Processes** - anything started earlier: session/job ID, working directory, output location and how to check it; check liveness before restarting or relying on it.
+- **Next** - the exact stopping point, the immediate next step, further steps only when already established; open questions for the user.
+- **Conflicts** - if the summary, notes and this prompt disagree, none wins automatically: prefer explicit user statements, check the evidence, ask if still unclear.
+- **Flushed** - one line: which files were updated (or "nothing flushed").
+Length: short when notes carry the state; up to about 400 words when they don't.
+
+## Rules
+
+- Output: one line of context at most, then exactly the two fenced `md` blocks.
+- Never upgrade unverified to verified, never present an inference as a user instruction.
+- If a `/handoff` workflow is active, Block 2 keeps its stage, owner, artifacts, boundaries and next authorized workflow action; don't invent a competing stage prompt.
+- Project-agnostic: assume nothing about repo layout beyond what this conversation shows.
