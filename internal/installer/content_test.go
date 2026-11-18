@@ -83,7 +83,7 @@ func TestWindowsPreviewManagesOnlySkillFile(t *testing.T) {
 	plan, err := PlanInstall(f.env, f.store, claudeOnly)
 	must(t, err)
 	want := map[string]bool{filepath.Join(f.home, ".claude", "CLAUDE.md"): true}
-	for _, name := range []string{"routing", "handoff", "consult"} {
+	for _, name := range []string{"routing", "handoff", "delegate", "consult", "subagents", "dialogue", "precompact"} {
 		want[contentSkill(f, name)] = true
 	}
 	if len(plan.Items) != len(want) {
@@ -111,7 +111,7 @@ func TestWindowsPreviewManagesOnlySkillFile(t *testing.T) {
 	if tree(t, f.home) != homeBefore {
 		t.Fatal("preview changed the home")
 	}
-	if got := f.env.ManagedPaths(profile.Claude); len(got) != 4 || got[1] != contentSkill(f, "routing") {
+	if got := f.env.ManagedPaths(profile.Claude); len(got) != 8 || got[1] != contentSkill(f, "routing") {
 		t.Errorf("managed paths %v", got)
 	}
 }
@@ -122,8 +122,8 @@ func TestWindowsApplyAndRestoreUpdateInPlace(t *testing.T) {
 	before, err := os.Stat(skill)
 	must(t, err)
 	m := install(t, f, claudeOnly, replaceAll)
-	if m == nil || m.Mode != state.ModeContent || len(m.Entries) != 4 {
-		t.Fatalf("expected a content-only snapshot of 4 files: %+v", m)
+	if m == nil || m.Mode != state.ModeContent || len(m.Entries) != 8 {
+		t.Fatalf("expected a content-only snapshot of 8 files: %+v", m)
 	}
 	after, err := os.Stat(skill)
 	must(t, err)
@@ -152,7 +152,7 @@ func TestWindowsApplyAndRestoreUpdateInPlace(t *testing.T) {
 	if b, _ := os.ReadFile(extra); string(b) != "user notes\n" {
 		t.Fatal("restore changed the extra file")
 	}
-	for _, name := range []string{"handoff", "consult"} {
+	for _, name := range []string{"handoff", "delegate", "consult", "subagents", "dialogue"} {
 		if _, err := os.Lstat(filepath.Dir(contentSkill(f, name))); !errors.Is(err, os.ErrNotExist) {
 			t.Errorf("named skill directory created for %s was not removed", name)
 		}
@@ -302,7 +302,7 @@ func TestWindowsRestoreCanBeUndone(t *testing.T) {
 	markWindows(t, f, installed.ID)
 	removed := restore(t, f, installed.ID, nil)
 	home := f.env.AgentHome(profile.Claude)
-	if removed == nil || len(removed.RemovedDirs) != 5 {
+	if removed == nil || len(removed.RemovedDirs) != 9 {
 		t.Fatalf("restore did not remove the created parents: %+v", removed)
 	}
 	if _, err := os.Lstat(home); !errors.Is(err, os.ErrNotExist) {

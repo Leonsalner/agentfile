@@ -17,8 +17,21 @@ import (
 	"agentfile/internal/profile"
 )
 
-// SkillNames are the managed skills, in install order.
-var SkillNames = []string{"routing", "handoff", "consult"}
+// SkillNames are the managed skills every agent receives, in install order.
+// consult, subagents and dialogue are one-line aliases that point to delegate,
+// kept so older handoffs and existing installs resolve.
+var SkillNames = []string{"routing", "handoff", "delegate", "consult", "subagents", "dialogue"}
+
+// agentSkills are managed skills that only one agent receives.
+var agentSkills = map[profile.Agent][]string{
+	profile.Claude: {"precompact"},
+	profile.Codex:  {"precompact-codex"},
+}
+
+// SkillsFor lists the managed skills for an agent, in install order.
+func SkillsFor(a profile.Agent) []string {
+	return append(append([]string(nil), SkillNames...), agentSkills[a]...)
+}
 
 // Artifact is one managed entry relative to an agent home: either the
 // instruction file or a named skill directory.
@@ -81,15 +94,18 @@ type Roster struct {
 		Model  string `json:"model"`
 		Effort string `json:"effort"`
 	} `json:"ladder"`
-	Evidence struct {
-		Note    string   `json:"note"`
-		Columns []string `json:"columns"`
-		Rows    []struct {
-			Effort string            `json:"effort"`
-			Values map[string]string `json:"values"`
-		} `json:"rows"`
-	} `json:"evidence"`
-	Stages []stageRow `json:"stages"`
+	Evidence evidenceTable `json:"evidence"`
+	Coding   evidenceTable `json:"coding"`
+	Stages   []stageRow    `json:"stages"`
+}
+
+type evidenceTable struct {
+	Note    string   `json:"note"`
+	Columns []string `json:"columns"`
+	Rows    []struct {
+		Effort string            `json:"effort"`
+		Values map[string]string `json:"values"`
+	} `json:"rows"`
 }
 
 func LoadRoster() (*Roster, error) {
@@ -106,7 +122,28 @@ func LoadRoster() (*Roster, error) {
 	if r.Schema != 1 {
 		return nil, fmt.Errorf("roster.json: unsupported schema %d", r.Schema)
 	}
+	for name, e := range map[string]evidenceTable{"evidence": r.Evidence, "coding": r.Coding} {
+		if err := r.checkTable(e); err != nil {
+			return nil, fmt.Errorf("roster.json %s: %w", name, err)
+		}
+	}
 	return &r, nil
+}
+
+// checkTable rejects columns that name no model and rows missing a column's
+// value, so a roster edit cannot silently drop or blank a table cell.
+func (r *Roster) checkTable(e evidenceTable) error {
+	for _, c := range e.Columns {
+		if _, ok := r.model(c); !ok {
+			return fmt.Errorf("column %q names no model", c)
+		}
+		for _, row := range e.Rows {
+			if _, ok := row.Values[c]; !ok {
+				return fmt.Errorf("row %q has no value for %q", row.Effort, c)
+			}
+		}
+	}
+	return nil
 }
 
 func (r *Roster) model(short string) (rosterModel, bool) {
@@ -128,6 +165,7 @@ func providerAgent(provider string) profile.Agent {
 type modelView struct{ Name, Efforts, Role string }
 type stageView struct{ Stage, Preferred, Alternative, Fallback, Escalate string }
 type allowanceView struct{ Client, Plan, Guidance, Credits string }
+type tableView struct{ Note, Table string }
 
 type data struct {
 	FileName, ContentVersion, ProfileSummary string
@@ -135,12 +173,12 @@ type data struct {
 	OnlyProvider, AgentList                  string
 	Models                                   []modelView
 	Ladder                                   string
-	Evidence                                 struct{ Note, Table string }
+	Evidence, Coding                         tableView
 	AlternativeHeader                        string
 	Stages                                   []stageView
 	Allowance                                []allowanceView
 	OrderNote                                string
-	AdvisorList, AdvisorModels, NonAdvisors  string
+	AdvisorList, NonAdvisors                 string
 }
 
 // Render produces every artifact for the selected agents. goos selects
@@ -162,14 +200,18 @@ func Render(p profile.Profile, goos string) ([]Artifact, error) {
 	d.ProfileSummary = p.Summary()
 
 	skills := map[string][]byte{}
-	for _, name := range SkillNames {
-		out, err := execute("skills/"+name+"/SKILL.md.tmpl", d)
-		if err != nil {
-			return nil, err
+	for _, a := range p.Agents() {
+		for _, name := range SkillsFor(a) {
+			if _, done := skills[name]; done {
+				continue
+			}
+			out, err := execute("skills/"+name+"/SKILL.md.tmpl", d)
+			if err != nil {
+				return nil, err
+			}
+			skills[name] = out
 		}
-		skills[name] = out
 	}
-
 	var arts []Artifact
 	for _, a := range p.Agents() {
 		fileName, tail := "AGENTS.md", ""
@@ -193,7 +235,7 @@ func Render(p profile.Profile, goos string) ([]Artifact, error) {
 			buf.Write(b)
 		}
 		arts = append(arts, Artifact{Agent: a, Path: fileName, Data: normalize(buf.Bytes())})
-		for _, name := range SkillNames {
+		for _, name := range SkillsFor(a) {
 			arts = append(arts, Artifact{Agent: a, Path: "skills/" + name, Files: map[string][]byte{"SKILL.md": skills[name]}})
 		}
 	}
@@ -241,22 +283,19 @@ func buildData(r *Roster, p profile.Profile, goos string) data {
 	switch {
 	case d.Both:
 		d.AgentList = "Claude Code and Codex"
-		d.AlternativeHeader = "Other-provider alternative"
-		d.AdvisorList = "Opus 5.5, Sol or Astra"
-		d.AdvisorModels = "Claude Opus 5.5, OpenAI Sol, and OpenAI Astra"
-		d.NonAdvisors = "OpenAI Luna and Claude Sonnet 5 are not advisors."
+		d.AlternativeHeader = "Other-provider alternative, if sufficient"
+		d.AdvisorList = "Opus 5.5 and Sol, plus Astra under its gate"
+		d.NonAdvisors = "Haiku 5.5, Sonnet 5.5 and Luna do checklist work and extraction as workers, not material-decision advice, unless the user names them for a discussion."
 	case d.Claude:
 		d.AgentList, d.OnlyProvider = "Claude Code", "Anthropic"
 		d.AlternativeHeader = "Alternative"
 		d.AdvisorList = "Opus 5.5"
-		d.AdvisorModels = "Claude Opus 5.5"
-		d.NonAdvisors = "Claude Sonnet 5 is not an advisor."
+		d.NonAdvisors = "Haiku 5.5 and Sonnet 5.5 do checklist work and extraction as workers, not material-decision advice, unless the user names them for a discussion."
 	default:
 		d.AgentList, d.OnlyProvider = "Codex", "OpenAI"
 		d.AlternativeHeader = "Alternative"
-		d.AdvisorList = "Sol or Astra"
-		d.AdvisorModels = "OpenAI Sol and OpenAI Astra"
-		d.NonAdvisors = "OpenAI Luna is not an advisor."
+		d.AdvisorList = "Sol, plus Astra under its gate"
+		d.NonAdvisors = "Luna does checklist work and extraction as a worker, not material-decision advice, unless the user names it for a discussion."
 	}
 
 	variant := "single"
@@ -283,28 +322,8 @@ func buildData(r *Roster, p profile.Profile, goos string) data {
 	}
 	d.Ladder = strings.Join(groups, " < ")
 
-	d.Evidence.Note = r.Evidence.Note
-	var cols []string
-	for _, c := range r.Evidence.Columns {
-		if m, ok := r.model(c); ok && selected(m.Provider) {
-			cols = append(cols, c)
-		}
-	}
-	var tb strings.Builder
-	tb.WriteString("| Effort |")
-	for _, c := range cols {
-		m, _ := r.model(c)
-		tb.WriteString(" " + m.Name + " |")
-	}
-	tb.WriteString("\n|---|" + strings.Repeat("---|", len(cols)) + "\n")
-	for _, row := range r.Evidence.Rows {
-		tb.WriteString("| " + row.Effort + " |")
-		for _, c := range cols {
-			tb.WriteString(" " + row.Values[c] + " |")
-		}
-		tb.WriteString("\n")
-	}
-	d.Evidence.Table = strings.TrimRight(tb.String(), "\n")
+	d.Evidence = r.table(r.Evidence, selected)
+	d.Coding = r.table(r.Coding, selected)
 
 	favored, note := favoredAgent(p)
 	d.OrderNote = note
@@ -316,8 +335,11 @@ func buildData(r *Roster, p profile.Profile, goos string) data {
 		case d.Claude:
 			rt = s.Claude
 		}
-		if d.Both && s.Reorder && favored != "" && routeAgent(r, rt.Preferred) != favored {
-			rt.Preferred, rt.Alternative = rt.Alternative, rt.Preferred
+		if d.Both && s.Reorder && favored != "" {
+			lead, pref, prefAgent := splitRoute(r, rt.Preferred)
+			if _, _, altAgent := splitRoute(r, rt.Alternative); prefAgent != "" && prefAgent != favored && altAgent == favored {
+				rt.Preferred, rt.Alternative = lead+rt.Alternative, pref
+			}
 		}
 		d.Stages = append(d.Stages, stageView{s.Stage, rt.Preferred, rt.Alternative, rt.Fallback, rt.Escalate})
 	}
@@ -330,22 +352,56 @@ func buildData(r *Roster, p profile.Profile, goos string) data {
 			av.Credits = "You declared paid extra usage as already enabled: once the included allowance is exhausted, you may continue on the same capable route with that paid usage when the task justifies the cost; say so when you do. Never purchase, enable or raise paid usage yourself."
 		case d.Both:
 			av.Credits = "No paid extra usage declared: once the included allowance is exhausted, move to the other selected provider's capable route or a listed allowance fallback, or stop and tell the user."
-		default:
+		case d.Claude:
 			av.Credits = "No paid extra usage declared: once the included allowance is exhausted, use a listed allowance fallback where the work fits, or stop and tell the user."
+		default:
+			av.Credits = "No paid extra usage declared: once the included allowance is exhausted, stop and tell the user."
 		}
 		d.Allowance = append(d.Allowance, av)
 	}
 	return d
 }
 
-// routeAgent identifies which agent a route string starts with.
-func routeAgent(r *Roster, s string) profile.Agent {
-	for _, m := range r.Models {
-		if strings.HasPrefix(s, m.Short) {
-			return providerAgent(m.Provider)
+// table renders an evidence table restricted to the selected providers' columns.
+func (r *Roster) table(e evidenceTable, selected func(string) bool) tableView {
+	var cols []rosterModel
+	for _, c := range e.Columns {
+		if m, ok := r.model(c); ok && selected(m.Provider) {
+			cols = append(cols, m)
 		}
 	}
-	return ""
+	var tb strings.Builder
+	tb.WriteString("| Effort |")
+	for _, m := range cols {
+		tb.WriteString(" " + m.Name + " |")
+	}
+	tb.WriteString("\n|---|" + strings.Repeat("---|", len(cols)) + "\n")
+	for _, row := range e.Rows {
+		tb.WriteString("| " + row.Effort + " |")
+		for _, m := range cols {
+			tb.WriteString(" " + row.Values[m.Short] + " |")
+		}
+		tb.WriteString("\n")
+	}
+	return tableView{e.Note, strings.TrimRight(tb.String(), "\n")}
+}
+
+// splitRoute cuts a route at the first model it names and reports that
+// model's agent. The text before the model is a condition on the whole cell
+// ("skip; if useful "), not part of either provider's route: it stays in the
+// Preferred column when a row is reordered. A route that names no model has
+// no agent and is never reordered.
+func splitRoute(r *Roster, s string) (lead, route string, agent profile.Agent) {
+	at := -1
+	for _, m := range r.Models {
+		if i := strings.Index(s, m.Short); i >= 0 && (at < 0 || i < at) {
+			at, agent = i, providerAgent(m.Provider)
+		}
+	}
+	if at < 0 {
+		return "", s, ""
+	}
+	return s[:at], s[at:], agent
 }
 
 // favoredAgent decides which provider's route leads comparable pairs. Only a

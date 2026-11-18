@@ -102,8 +102,8 @@ func TestFreshInstallAndRestoreToAbsent(t *testing.T) {
 	stateTop := strings.Split(stateRel, string(filepath.Separator))[0]
 	before := treeWithout(t, f.home, stateTop)
 	m := install(t, f, both, nil)
-	if m == nil || len(m.Entries) != 8 {
-		t.Fatalf("expected 8 entries, got %+v", m)
+	if m == nil || len(m.Entries) != 16 {
+		t.Fatalf("expected 16 entries, got %+v", m)
 	}
 	for _, a := range []profile.Agent{profile.Claude, profile.Codex} {
 		for _, p := range f.env.ManagedPaths(a) {
@@ -153,8 +153,8 @@ func TestPreviewWritesNothing(t *testing.T) {
 	for _, it := range plan.Items {
 		paths = append(paths, it.Path)
 	}
-	if len(paths) != 8 {
-		t.Fatalf("preview lists %d paths, want 8", len(paths))
+	if len(paths) != 16 {
+		t.Fatalf("preview lists %d paths, want 16", len(paths))
 	}
 }
 

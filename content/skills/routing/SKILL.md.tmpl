@@ -1,37 +1,70 @@
 ---
 name: routing
-description: Mandatory before any stage action in an active handoff workflow; otherwise use before choosing a model or stage owner, including escalation and allowance fallback.
+description: Load before choosing any model — at the END of an active handoff stage together with handoff (next-stage routes), and before choosing an advisor, worker, discussion participant, escalation or allowance fallback. Not needed at stage start.
 ---
 
 ## Model routing
 
-Choose for task quality, total tokens, time and plan allowance, never API list prices. Pick the lowest capable rung on the capability ladder that has a reliable success signal and reroute once when evidence shows it is insufficient.{{if .Both}} Effort names are not comparable across models: Sol low is a tier below Opus low, and Sol medium roughly matches Opus low.{{end}}
+Choose for task quality first, then time, tokens and plan allowance; never compare API dollars across providers. First pick the rung the task needs for its shape and success signal; when torn between two adjacent rungs, take the higher.{{if .Both}} A meaningful task-fit advantage wins on either provider. Among sufficiently supported comparable routes, the Claude route is the reviewed default tie-break (a routing preference, not a claim of model superiority). About 2 index points, and for Implement, Fix and Verify Impl about 4 points on both FrontierCode 2.0 and Terminal-Bench 4.0, are comparison heuristics, not hard capability cutoffs. Check the evidence that matters for the task.{{end}} The declared plan allowance may reorder only comparable routes and never lowers the rung the task needs. Reroute once when evidence shows a route falls short. Effort names do not compare across models; use the ladder.
 
 **Roster** (selected agents: {{.AgentList}}):
 
 {{range .Models}}- **{{.Name}}** ({{.Efforts}}) — {{.Role}}
 {{end}}
-**Capability ladder** (approximate, weakest first): {{.Ladder}}.
+Set effort on every launch{{if .Claude}}: Claude Code defaults Opus, Sonnet and Haiku to medium{{end}}.
+{{if .Both}}
+**Provider options.** Always show Claude and GPT, in that order, for an owner recommendation or child-model choice. Name one best task-fit model and effort per provider; mark it suitable, conditional (name the guard), below need or insufficient evidence. State separately when a route is unavailable in the client or account or under a reported usage limit: capability and availability are independent. Visible options do not authorize two launches. Choose one RUN route and explain it: best fit, comparable choices with the Claude default, the declared plan allowance or an observed usage limit, a named user choice or advisor diversity; several reasons may matter. Do not ask merely to break a supported tie. An unsuitable provider still gets a truthful line, not a weakened substitute. Use a compact slate in handoffs and a Provider / Model and effort / Task fit / Availability table for substantial decisions. ESCALATE names the trigger and next suitable route(s), or none above.
+{{end}}
+**Capability ladder** (Artificial Analysis Index v5.0.1, weakest first; task scores differ): {{.Ladder}}. No regular route: {{if .Codex}}Luna medium–max, {{end}}{{if .Claude}}Haiku medium/max, Sonnet low/max, {{end}}{{if .Codex}}Astra low, xhigh and max (high is its ceiling); Astra medium and high only under its gate{{else}}Opus max except as the last escalation{{end}}.
 
-**Evidence and limits.** {{.Evidence.Note}}
+**Coding signals diverge** from the index: use the index for Plan and Verify Plan, and for Implement, Fix and Verify Impl check FrontierCode 2.0 and Terminal-Bench 4.0 alongside the relevant agent harness.{{if .Both}} Sol medium leads Opus high on FrontierCode 2.0 (41 vs 36) and sits one point behind on Terminal-Bench 4.0 (56 vs 57). Astra xhigh leads Opus xhigh on both (49/64 vs 44/60), but Astra routes stop at high (47/60), and Claude Code Opus max still leads Codex Astra xhigh on Coding Agent Index v2.1 (58 vs 53). Sonnet xhigh equals Opus high on both (36/57).{{else if .Claude}} Opus pulls ahead on FrontierCode 2.0 at xhigh (44). Sonnet xhigh equals Opus high on both (36/57).{{else}} Sol gains most from low to medium on both (31→41, 38→56); high leads xhigh on Terminal-Bench 4.0 (59 vs 56), while xhigh and max add a few FrontierCode 2.0 points (43, 44). Astra high leads every Sol effort on FrontierCode 2.0 (47).{{end}}
+
+**Evidence.** {{.Evidence.Note}}
 
 {{.Evidence.Table}}
-{{if .Both}}
-In OpenAI-reported results, Sol xhigh leads AutomationBench and Sol max roughly matches frontier Anthropic models on DeepSWE, with Luna max close behind. These are vendor-run and compare earlier model versions.
-{{else if .Codex}}
-In OpenAI-reported agentic coding results, Sol at xhigh/max leads and Luna max stays close behind. These are vendor-run.
+
+{{.Coding.Note}}
+
+{{.Coding.Table}}
+{{if .Codex}}
+GPT-6.2 evidence (2026-11-18): [Artificial Analysis Astra](https://artificialanalysis.ai/models/gpt-6-2-astra/), [Artificial Analysis Sol](https://artificialanalysis.ai/models/gpt-6-2-sol/) (v5.0.1 benchmark and performance data), [OpenAI release](https://openai.com/index/introducing-gpt-6-2-astra-sol/), [OpenAI API changelog](https://developers.openai.com/api/docs/changelog) (model IDs `gpt-6.2-sol` and `gpt-6.2-astra`). The Sol and Astra cells use weighted output tokens per task and first-answer latency from that model-page snapshot. API performance, agent-harness results and plan usage are separate measurements.
 {{end}}
-| Stage / shape | Preferred | {{.AlternativeHeader}} | Allowance fallback | Escalate when |
+{{if .Both}}[Coding Agent Index v2.1](https://artificialanalysis.ai/agents/coding-agents/comparisons/claude-code-vs-codex){{else}}Artificial Analysis's Coding Agent Index v2.1{{end}} (FrontierCode 2.0, Terminal-Bench 4.1 and SWE-Atlas-QnA, each model in its own harness; 2026-11-18):{{if .Claude}} Claude Code Opus max 58, Sonnet max 56{{end}}{{if .Both}};{{end}}{{if .Codex}} Codex Astra 36/49/52/53/53 and Sol 37/45/47/50/49, low→max; at xhigh a task takes 16.5 min vs 25.1 min at max for Astra, and 12.6 vs 17.5 min for Sol{{end}}. Harness scores include harness effects: never mix them with the tables above. Token and benchmark figures are routing evidence, not a guarantee on local tasks.
+{{if .Both}}
+Pairs behind the routes (index; FrontierCode 2.0/Terminal-Bench 4.0): Opus high 52, 36/57 vs Sol medium 53, 41/56. Sol max and Astra medium both score 57 (44/60 and 47/59), level with Opus xhigh (57; 44/60).
+{{end}}
+| Stage / shape | Preferred | {{.AlternativeHeader}} | Allowance fallback | Escalate when → to |
 |---|---|---|---|---|
 {{range .Stages}}| {{.Stage}} | {{.Preferred}} | {{.Alternative}} | {{.Fallback}} | {{.Escalate}} |
 {{end}}
-Allowance fallbacks apply only when the preferred{{if .Both}} and alternative routes are{{else}} route is{{end}} under material allowance pressure or exhausted, and only for work the fallback can handle; they never replace a judgment-heavy route.{{if .Codex}} Luna is also the default for Codex worker subagents on mechanical or extraction tasks.{{end}}
+{{if .Claude}}Allowance fallbacks apply only when the preferred{{if .Both}} and alternative routes are{{else}} route is{{end}} under material allowance pressure or exhausted{{if .Claude}} (Sonnet xhigh also when an Opus-family usage limit blocks Opus){{end}}, and only for work the fallback can handle with a strong checker; they never replace a judgment-heavy route, and a weak result escalates rather than retries.{{if .Both}} Above Bounded, an other-provider alternative needs evidence that fits the task and its checks. For Sol, prefer xhigh for a demonstrated repository reasoning gap and choose max only when a measured advantage fits the task. For frontier synthesis and Deep plans, take the Claude Code route when Astra is not granted.{{end}} {{end}}Workers are ordinary task-fit choices{{if .Both}} for either provider{{end}}, independent of the owner stage row; use the worker routes below.
+
+**Complex implementation and verification** cover changes across coupled components with a known design and checkable invariants. Use this intermediate tier for Implement and Verify Impl. Record the workflow shape as Standard and name the Complex route in the handoff WHY when applicable. Plan and Verify Plan still use the Standard rows. Deep still covers ambiguous invariants, hard concurrency or changes whose correctness is difficult to verify.
 
 **Shape test.** Micro requires an explicit outcome, tiny named surface, no discovery and a direct checker. Bounded requires a small familiar surface, close specification, reversibility and strong acceptance criteria. Standard begins with meaningful exploration, cross-file coupling, debugging, non-trivial design or a weak success signal. Deep is ambiguous long-horizon work, security architecture, difficult concurrency or consequential migration design.
 
 Do not restart a stage merely because its shape rises. Continue safe inspection, then reroute the next owner/run when the current route lacks enough capability. A cheaper attempt that produces usable evidence is not wasted; include that evidence in the reroute. After one failure, do not repeat the materially identical attempt.
 
-Exposure controls action gates, not model intelligence. A Consequential but tiny action may be Micro yet still needs its boundary check; a difficult Local refactor may be Deep without requiring permission. Consult targets: {{.AdvisorList}}; use the consult skill. Fix follows Implement; Plan Next follows Plan.
+Exposure controls action gates, not model intelligence. A Consequential but tiny action may be Micro yet still needs its boundary check; a difficult Local refactor may be Deep without requiring permission. Advisor picks: see **Advisor route**. Fix follows Implement; Plan Next follows Plan.
+
+## Worker routes
+
+Workers follow the `delegate` skill. Choose by task fit, then allowance.{{if .Both}} The Claude route is the default among comparable routes; either provider's owner may launch either provider.{{end}} Batch related tasks; use direct tools for deterministic search and substitutions when they suffice.
+
+| Bounded task |{{if .Claude}} Claude Code |{{end}}{{if .Codex}} Codex |{{end}}
+|---|{{if .Claude}}---|{{end}}{{if .Codex}}---|{{end}}
+| Exact extraction, mechanical log summary |{{if .Claude}} Haiku 5.5 low |{{end}}{{if .Codex}} Sol low; Luna low only for very large volume |{{end}}
+| Repetitive specified edits with a direct checker |{{if .Claude}} Haiku 5.5 high |{{end}}{{if .Codex}} Sol low |{{end}}
+| Bounded semantic execution, test-log triage |{{if .Claude}} Sonnet 5.5 high; Haiku 5.5 xhigh only for checkable tasks it can handle |{{end}}{{if .Codex}} Sol medium |{{end}}
+| Source collection, web research |{{if .Claude}} Opus 5.5 medium, read-and-web-only child where the transport allows |{{end}}{{if .Codex}} Sol high |{{end}}
+| Quick sanity check against supplied criteria |{{if .Claude}} Haiku 5.5 high for fixed checks; Opus 5.5 low for fresh judgment |{{end}}{{if .Codex}} Sol low for fixed checks and fresh judgment |{{end}}
+| Multi-file bounded work with a checker |{{if .Claude}} Opus 5.5 medium |{{end}}{{if .Codex}} Sol medium; high when diagnosis or terminal work warrants it |{{end}}
+| Research synthesis (quality first) |{{if .Claude}} Opus 5.5 xhigh; high for a narrow, well-sourced question |{{end}}{{if .Codex}} {{if .Both}}Astra high only under its gate{{else}}Sol max; Astra high only under its gate{{end}} |{{end}}
+| Hard or long-horizon implementation in its own worktree |{{if .Claude}} Opus 5.5 xhigh |{{end}}{{if .Codex}} Sol xhigh; max when its measured advantage fits the task; Astra high only under its gate |{{end}}
+
+Fan-out size never lowers the capability a task needs. These are starting points; the owner resolves conflicting evidence and keeps acceptance.
+
+**Orchestrating owner.** An owner whose main work is directing workers, where delegation has a concrete benefit under `delegate`, is an ordinary stage owner, not a stage: it decomposes, writes packets with finite acceptance criteria, launches bounded waves, verifies each result, integrates serially and runs the combined checks; it may do scoped work directly, and its own checking does not replace a fresh Verify Impl.{{if .Claude}} The default {{if .Both}}Claude {{end}}orchestrator is Opus 5.5, medium for specified execution and high when decomposition, acceptance criteria or integration need judgment.{{end}} It may consult an advisor (see **Advisor route**) at the large steps: the decomposition before the first fan-out, ordering work, a merge decision on conflicting results, or when stuck. It acts on the advice and keeps decision authority; it does not hand the work over. Pick each worker from the table above by its own task, never by the owner's model, with an explicit model and effort (a native subagent without a model inherits the owner's). Every owner turn re-reads its whole context, so wait on a wave once rather than taking a turn per child, and keep bulk reads and fetched pages in workers.
 
 ## Plan allowance
 
@@ -41,25 +74,29 @@ These routes were generated from the plan you declared; agentfile never inspects
 {{end}}{{if .OrderNote}}
 {{.OrderNote}}
 {{end}}
+Plan allowance is not API price, and no vendor publishes a per-effort allowance multiplier.{{if .Codex}} [OpenAI](https://learn.chatgpt.com/docs/pricing) estimates local messages per 5 hours on Plus and Standard Business: GPT-6.2 Sol 17–180, GPT-6.2 Astra 6–50 and Luna 350–3,000 (estimates vary by task); ChatGPT Pro has no 5-hour limit.{{end}}{{if .Claude}} Claude session and weekly limits are shared across all models and across Claude and Claude Code, and subagents count toward them; Anthropic says only that higher effort uses more tokens and that Haiku and Sonnet cost fewer tokens than Opus. [Claude Code's error docs](https://code.claude.com/docs/en/errors.md) mention separate Opus-family and Sonnet-family limits without saying which plans have them; after such a limit, a model outside that family may still run.{{end}}
+
 First select every route capable of the task; the declared plan may only order comparable suitable routes and decide how sparingly to spend a limited allowance. It never makes an incapable route eligible, never lowers the capability rung the task requires, and never makes an expensive model the default without a task-specific reason.
 
-When the client reports a usage limit, or a recommended model is unavailable in the client or account, take the next capable route in the table{{if .Both}} (including the other provider's route){{end}}, or a listed allowance fallback where the work fits. If none remains, stop and tell the user which model or allowance is missing. Never invent a route from a model name or plan label.
+When the client reports a usage limit, or a recommended model is unavailable in the client or account, take the next capable route in the table{{if .Both}} (including the other provider's route){{end}}{{if .Claude}}, or a listed allowance fallback where the work fits{{end}}. Classify the limit by its scope: an account-wide limit excludes that account on every transport; a model-family limit excludes only that family. If no route remains, stop and tell the user which model or allowance is missing. Never invent a route from a model name or plan label.
 
 ## Advisor route
 
-After a valid trigger, choose task-suitable advisor models.{{if .Claude}} Use Opus 5.5 low only for a narrow, bounded question with supplied evidence and a checkable conclusion; use Opus 5.5 medium when the advisor must explore tradeoffs or diagnose from incomplete evidence, and Opus 5.5 high only for demonstrated hard security architecture, concurrency, migration or irreversible analysis.{{end}}{{if .Codex}} Use Sol medium only for a narrow, bounded question with supplied evidence and a checkable conclusion; use Sol high/xhigh when the advisor must explore tradeoffs or diagnose from incomplete evidence, and Sol max only for demonstrated hard security architecture, concurrency, migration or irreversible analysis. Astra additionally requires explicit model-specific user approval for that scope, and only when {{if .Both}}those routes demonstrably fall{{else}}Sol max demonstrably falls{{end}} short; ordinary advisor capacity never authorizes it. Emit `ASTRA REQUEST: <scope> — <specific frontier need>` and continue safe work while pending. No reply or a refusal means Astra is not granted, consumes no attempt, and does not exclude eligible {{if .Both}}Opus or Sol{{else}}Sol{{end}} advice.{{end}} Spare allowance alone never justifies effort or model escalation. {{.NonAdvisors}}
+Advisors are {{.AdvisorList}}. {{.NonAdvisors}}
 
-Build one frozen list of at most two eligible routes. Explicit model/transport restrictions narrow the list first. Identify the actual executing provider from launch/harness metadata; unknown identity cannot establish cross-provider review.
+| Question |{{if .Claude}} Claude Code |{{end}}{{if .Codex}} Codex |{{end}}
+|---|{{if .Claude}}---|{{end}}{{if .Codex}}---|{{end}}
+| Quick fresh look at something simple; the answer is verifiable on sight |{{if .Claude}} Opus 5.5 low |{{end}}{{if .Codex}} Sol low |{{end}}
+| Bounded: narrow, reversible, one decision, evidence supplied |{{if .Claude}} Opus 5.5 medium |{{end}}{{if .Codex}} Sol medium |{{end}}
+| Standard: tradeoffs, design choice, diagnosis from incomplete evidence |{{if .Claude}} Opus 5.5 high |{{end}}{{if .Codex}} Sol high |{{end}}
+| Hard, large or high-stakes: security architecture, concurrency, irreversible migration, a packet bundling many decisions, a review across a whole batch of changes |{{if .Claude}} Opus 5.5 xhigh |{{end}}{{if .Codex}} Sol xhigh, only if the scoped question fits its evidence; Astra high only under its gate |{{end}}
+| The row above fell short |{{if .Claude}} {{if .Both}}Reassess with another provider; {{end}}Opus 5.5 max |{{end}}{{if .Codex}} {{if .Both}}Narrow the question or reassess with another provider{{else}}Sol max for knowledge-heavy synthesis; otherwise narrow the question{{end}}; Astra high only under its gate |{{end}}
 {{if .Both}}
-- Prefer the other provider's advisor. Within a provider, prefer an eligible isolated read-only harness advisor; otherwise use the provider's CLI.
-- Without an explicit cross-provider requirement, reserve the second slot for one same-provider fallback when available, preferring an eligible harness subagent over another CLI process. If no cross-provider route exists, the same-provider fallback can be the initial and only candidate.
-- For an explicit cross-provider requirement, exclude same-provider and unknown-independence routes. If required review cannot be obtained, stop-and-ask. Consequential exposure alone never triggers a call.
+- Prefer the provider other than the executing owner's; for advisors, provider diversity outranks the Claude default. A Codex owner asks Opus; a Claude Code owner asks Sol, or Astra high under its gate on the hardest row. Diversity does not establish capability equivalence (on the index, Astra high 60, Opus xhigh 57, Sol xhigh 56): if no sufficiently capable other-provider route is established for the question, say so rather than claiming a weaker one meets the need. Start with one advisor; for a hard or high-stakes decision, one per provider is often worth it.
+- Same-provider advice is allowed and labeled; it never meets a cross-provider requirement. Never the executing process.
 {{- else}}
-- Only {{.OnlyProvider}} models are selected, so every advisor is a same-provider, non-independent advisor; label it so. Prefer an eligible isolated read-only harness advisor over a CLI process.
-- An explicit cross-provider requirement cannot be met with the selected agents: stop and ask the user. Consequential exposure alone never triggers a call.
+- Only {{.OnlyProvider}} models are selected, so every advisor is same-provider: label it so. An explicit cross-provider requirement cannot be met with the selected agents: stop and ask the user. Never the executing process.
 {{- end}}
-- Harness eligibility requires a known suitable model/provider, no inherited conversation, read-only permissions, and observable completion/cancellation. If those are unavailable, do not invent harness support.
-- Do not fill two slots with different transports of the same account. A usage-limit or auth failure excludes every transport that shares the failed account. Never add candidates after a failure. A changed boundary may only remove candidates.
-- Exclude unsuitable, already-attempted-in-this-batch, non-fresh, and non-read-only routes. Prior auth/launch failures remain excluded until evidence shows the cause corrected; prior transient failures can be reconsidered only for an independently eligible later batch. Honor explicit grant route/fallback restrictions.
-
-Route or transport changes never change model quality, reset budget, or authorize another call.
+- Use a native read-only child for same-provider advice, or the CLI (`delegate`).{{if .Codex}}
+- **Astra gate:** Astra needs a demonstrated hard need, capable regular routes that failed or are unsuitable, and explicit per-scope user approval, and its routes stop at high. That ceiling limits the routes you choose, not the user: when the user names Astra at xhigh or max, run it at the named effort. Ask for approval with the specific frontier need and continue safe work while it is pending; no reply or a refusal means Astra is not granted and leaves {{if .Both}}Opus and Sol{{else}}Sol{{end}} advice available.{{end}}
+- Effort follows how hard and how costly the decision is, not how important the task feels. When torn between two rows, take the lower and escalate one row only when the answer is shallow or misses the point you asked about; that is falling short, not a re-ask. A fan-out wave gives each advisor the row for its own question, not the batch's.{{if .Both}} Medium → high adds 4 index points for Opus and 2 for Sol; Sol high → xhigh adds 1 and improves FrontierCode 2.0 while Terminal-Bench 4.0 falls. Low trails medium by about 12 points for both, so keep it for quick looks.{{else if .Claude}} Opus medium → high is +4 index at about twice the time to first token; low is 13 points below medium, so keep it for quick looks.{{else}} Sol medium → high adds 2 index points (3.0 s vs 9.6 s to first token), and high → xhigh adds 1 and improves FrontierCode 2.0 while Terminal-Bench 4.0 falls; low is 12 points below medium, so keep it for quick looks.{{end}} Compact packets cut input, not reasoning output: choose effort for the question. Route or transport changes never change model quality or provider diversity, and are never a reason to re-ask.

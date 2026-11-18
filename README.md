@@ -2,7 +2,10 @@
 
 A small terminal installer for a shared set of agent instructions and skills
 for **Claude Code** and **Codex**: a stage-based handoff workflow, model
-routing, and a bounded advisor ("consult") policy.
+routing, one skill for advisors, discussions and workers ("delegate", with
+"consult", "subagents" and "dialogue" kept as short aliases that point to it)
+and an explicitly invoked pre-compaction prompt ("precompact" for Claude Code,
+"precompact-codex" for Codex).
 
 It asks which agents you use and which plan you are on, shows exactly what it
 will change, backs up anything it replaces, and can put everything back.
@@ -13,8 +16,8 @@ Only these paths, and only for the agents you select:
 
 | Agent | Paths |
 |---|---|
-| Claude Code | `~/.claude/CLAUDE.md`, `~/.claude/skills/{routing,handoff,consult}` |
-| Codex | `~/.codex/AGENTS.md`, `~/.codex/skills/{routing,handoff,consult}` |
+| Claude Code | `~/.claude/CLAUDE.md`, `~/.claude/skills/{routing,handoff,delegate,consult,subagents,dialogue,precompact}` |
+| Codex | `~/.codex/AGENTS.md`, `~/.codex/skills/{routing,handoff,delegate,consult,subagents,dialogue,precompact-codex}` |
 
 On Windows, agentfile manages file contents only (see
 [Windows: contents only](#windows-contents-only)). There it manages
@@ -40,6 +43,11 @@ go build -o agentfile ./cmd/agentfile
 ./agentfile
 ./agentfile --version                   # binary and content provenance
 ```
+
+The screens fit the terminal's size and follow it when you resize. They need
+at least 40 columns and 10 rows: in a smaller terminal agentfile asks for a
+larger one and ignores every key except ctrl+c, which quits, so that a key
+cannot confirm a question you cannot see.
 
 The installer asks three things per selected agent:
 
@@ -87,9 +95,11 @@ and any parent directory it creates.
 
 Backups are never pruned automatically. They may contain your instruction
 text: on macOS and Linux the `agentfile` and `backups` directories are
-owner-only (`0700`). The main menu lists each backup with its age, content
-version, agents, target count and size. Delete old ones by hand when you no
-longer need them.
+owner-only (`0700`). **Restore from a backup** lists each backup with the time
+and kind of the operation it was made for, its age, agents, path count,
+content version and size. A terminal too narrow for every column leaves the
+last ones off the table; the line under it adds them for the selected backup
+as far as they fit. Delete old ones by hand when you no longer need them.
 
 ## Restore
 
